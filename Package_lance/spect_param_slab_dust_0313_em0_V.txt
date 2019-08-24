@@ -1,0 +1,12 @@
+                                                      cm
+                                                 1000.0 36000.0
+                                                    mi
+                                           1152
+                                               48
+               conv
+                    s
+                       y
+                                     32
+                                     1
+                        0.01400
+                        CRISM_index_waves_mi.dat

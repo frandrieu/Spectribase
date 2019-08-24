@@ -1,0 +1,99 @@
+1ère étape : construction de l'application
+
+1-a génération de la bibliothèque numérique DISORT : utiliser le fichier "make"
+makefile_maui_disort à adapter aux spécificités de ta station de travail (compilo
+fortran, options, etc...).
+puis lancer la commande sous le shell : make -f makefile_maui_disort libdisort.so
+
+1-b compilation de l'application spectribase : modifier le source de l'appli
+principale (spectribase_vfclean.f90) de telle manière à déclarer le répertoire dans
+lequel seront créés les fichiers scratch temporaires de calcul (privilégier un
+disque à accès rapide physiquement lié à la machine de calcul). Ce répertoire est
+déclaré par deux fois dans le code; par ex. defaultfile='/home/fastworkdir'.
+Utiliser le fichier "make" makefile_maui_spectribase à adapter là aussi aux
+spécificités de ta station de travail (compilo fortran, options, etc...).
+La variable LIB_DIR2 doit contenir le chemin absolu où se situe la bibliothèque
+libdisort.so générée précédemment. Puis lancer la commande sous le shell : make -f
+makefile_maui_spectribase spectribase ; mettre ce dernier exécutable dans un
+répertoire déclaré au niveau de la variable d'environnement PATH de l'utilisateur.
+
+2 ème étape : Utiliser l'application
+
+2-a Sous IDL utiliser create_sfiles pour générer les fichiers d'entrée binaires et
+ascii nécessaires au lancement de l'application. Les mettre ainsi que le fichier
+d'expérience .par dans un répertoire à part (par exemple Ent_fich). Parmi les
+fichiers générés on modifiera les fichiers spect_XXX.txt (un par endmember et par
+gamme spectrale; par ex. spect_param_slab_granul_dust_em0_F.txt) afin qu'ils
+prennent en compte les bonnes options de calcul (calcul paramétré ou DSIORT, etc.).
+En général on aura pour un calcul complet sur voie IR de CRISM:
+
+                                                      cm
+                                                 1900.0 12000.0
+                                                    mi
+                                          12224
+                                               48
+               conv
+                    s
+                       y
+                                     32
+                                     4
+                        0.01000
+                                 lbd_OMEGA_C.dat
+
+ensuite on isole les scripts de lancement lance_XXX.sh (un par endmember et par
+gamme spectrale) et on les met dans un répertoire de simulation distinct (par
+exemple Job). 
+
+2-b préparation de la simulation
+
+Se placer dans le Job et modifier le fichier env.txt (template inclus dans la
+distribution) de telle manière à déclarer les chemins d'accès :
+- absolus du répertoire contenant les indices optiques des glaces (Optical indexes
+directory) et de la racine (Home directory)
+- relatifs aux différents fichiers d'entrée et de sortie (Listarea directory, etc.).
+
+2-c  lancement de la simulation
+1ère étape : le calcul de transfert radiatif
+ Lancer la simulation grâce au script lance_XXX.sh de préférence en batch avec un
+fichier log pour recevoir les messages; par ex. nohup
+lance_spectri_param_granul_seul_em0_F > log & Cette phase du calcul va produire un
+certain nombre de fichiers scratch (_XXX_em0_F_scratchxxx,
+_XXX_em0_F_scratch_header) dans le répertoire de calcul prêt à être exploités lors
+de la deuxième étape. Je vous fournit les fichiers de constantes optiques des
+glaces de CO2 et H2O dans le répertoire : Const_optiques
+
+3ème étape : la dérésolution des spectres à l'aide de programmes idl (disponibles
+sous Deresolution) suivant les caractéristiques expérimentales
+Le script de lancement fournit dans la distrib batch_dere.pro est un template à
+modifier. Il est utile pour une exécution en batch (la dérésolution peut être une
+opération assez longue). Le programme principal qui assure la dérésolution est
+convol_inst_spectribase_block.pro dont l'interface est :
+
+ convol_inst_spectribase_block, SUFFIX, N_ENDM, C=C, L=L, keep=keep
+SUFFIX identifiant de l'expérience
+N_ENDM indice de l'endmember courant (en partant de 0)
+/C /L optionnel pour sélectionner une voie OMEGA
+/keep pour éviter la destruction automatique des fichiers scratch à la fin de la
+dérésolution à des fins de debuggage ou de recyclage.
+
+Si tout va bien les spectres sont disponibles dans un cube au format PDS et à label
+détaché (ex: label param_slab_granul_dust_em0_F.cub.lbl raster
+param_slab_granul_dust_em0_F.cub)
+
+*****************************
+très important : l'utilisation de spectribase est conditionnée à la mention des aux
+citations suivantes dans toute publication scientifique utilisant les simulations :
+Doute; S.; Schmitt & B.
+A multilayer bidirectional reflectance model for the analysis of planetary surface
+hyperspectral images at visible and near-infrared wavelengths
+J.~Geophys.~Res., 1998, 103, 31367--31390
+
+Douté, S.; Deforas, E.; Schmidt, F.; Oliva, R. & Schmitt, B.
+A Comprehensive Numerical Package for the Modeling of Mars Hyperspectral Images
+Lunar and Planetary Institute Conference Abstracts, 2007, 38, 1836-+
+
+l'utilisation des constantes optiques des glaces est conditionnée aux conditions
+mentionnées sur le site suivant : http://ghosst.osug.fr/ Je vous encourage
+d'ailleurs à souscrire à ce service qui vous permettra d'accéder à d'autres
+constantes optiques.
+*****************************

@@ -1,0 +1,567 @@
+! **************************************************************
+! **************************************************************
+! **                                                          **
+! **  FCT_REFLECTANCE:                                        **
+! **                                                          **
+! **  Calculation of the bidirectional reflectance            **
+! **  for a semi-infinite medium characterized by its         **
+! **  single scattering albedo and phase function             **
+! **  (modified Hapke model, analytical H functions)          **
+! **                                                          **
+! **  MODIF F. ANDRIEU 08/2013 L.519 in fct_S                 **
+! **  MODIF F. ANDRIEU 03/2014 ajout L.357 in correct         **
+! **                                                          **
+! **************************************************************
+! **************************************************************
+
+function fct_reflectance(w, g, dzeta, theta0, theta, alpha, err_flag)
+
+  ! |------------------------------------------------------------|
+  ! |  Parameters :                                              |
+  ! |  - in   w single scattering albedo                         |
+  ! |         g Henyey Greenstein phase function                 |
+  ! |         dzeta mean roughness slope                         |
+  ! |         theta0 incidence angle (in degree)                 |
+  ! |         theta emission angle (in degree)                   |
+  ! |         alpha phase angle (in degree)                      |
+  ! |                                                            |
+  ! |  - out  fct_reflectance value of the reflectance           |
+  ! |         err_flag flag error                                |
+  ! |                                                            |
+  ! |  Other quantities :                                        |
+  ! |         mu cosinus of theta                                |
+  ! |         muo cosinus of theta0                              |
+  ! |         muo_b factor                                       |
+  ! |         mu_b factor                                        |
+  ! |         c_phi  cosinus of the azimuth angle                |
+  ! |         phi azimuth angle (in radian)                      |
+  ! |         b Legendre coefficient                             |
+  ! |         s0 first order of the reflection function          |
+  ! |         s1 second order of the reflection function         |
+  ! |                                                            |
+  ! |------------------------------------------------------------|
+
+  implicit none
+  real:: w, g, theta0, theta, alpha, fct_reflectance, fct_S
+  real:: fct_h0, fct_h1, fct_c, fct_phase
+  real,intent(in),optional:: dzeta 
+  real:: pi
+  parameter(pi=3.1415927410126)
+
+  ! Local variables :
+
+  real:: mu,muo,muo_b,mu_b,c_phi,phi,b,s0,s1,c_phi_c
+  integer:: err_flag
+
+  mu=cos(pi*theta/180.)  
+  muo=cos(pi*theta0/180.)
+  muo_b=0.               
+  mu_b=0.                
+  c_phi=0.               
+  phi=0.                 
+
+  ! **************************************************************
+  ! Checking the geometry
+
+  if((theta0.lt.0.).or.(theta0.ge.90.)) then 
+     fct_reflectance=0.
+     err_flag=1
+     return
+  endif
+
+  if((theta.lt.0.).or.(theta.ge.90.)) then
+     fct_reflectance=0.
+     err_flag=1
+     return
+  endif
+
+  if((alpha.lt.0.).or.(alpha.gt.180.)) then
+     fct_reflectance=0.
+     err_flag=1
+     return
+  endif
+
+  if(((theta0.eq.0.).or.(theta.eq.0.)).or.(alpha.lt.2)) then
+     c_phi=1.
+     phi=0.
+  else
+     c_phi=(cos(pi*alpha/180.)-muo*mu)/(sqrt(1-muo**2)&
+          &*sqrt(1-mu**2))
+     if(c_phi.gt.1.) c_phi=1.
+     if(c_phi.lt.-1.) c_phi=-1.
+     phi=acos(c_phi)
+  endif
+
+  if((phi.lt.0.).or.(phi.gt.pi)) then
+     fct_reflectance=0.
+     err_flag=1
+     return
+  endif
+
+  ! **************************************************************
+  ! Calculation of the roughness correction function
+
+  if (present(dzeta).and.(dzeta/=0.)) then
+     call correct(theta0, theta, phi, dzeta,& 
+          &muo, mu, muo_b, mu_b)
+  endif
+
+  ! **************************************************************
+  ! Calculation of the intrinsic reflectance
+
+  b=0. 
+  if (abs(g).gt.1./3) then 
+     b=abs(g)/g 
+  else 
+     b=3.*g
+  endif
+
+  s0=0. 
+  s1=0. 
+
+  s0=fct_h0(w,g,mu)*fct_h0(w,g,muo)*& 
+       &(1-fct_c(w,g)*(mu+muo)-b*(1.-w)*mu*muo)
+
+  s1=b*sqrt(1-muo**2)*sqrt(1-mu**2)*fct_h1(w,g,mu)&
+       &*fct_h1(w,g,muo)
+
+  if(((muo.eq.1.).or.(mu.eq.1.)).or.(alpha.lt.2)) then
+     c_phi_c=1.
+  else
+     c_phi_c=(cos(pi*alpha/180.)-muo*mu)&
+          &/(sqrt(1-muo**2)*sqrt(1-mu**2))
+     if(c_phi_c.gt.1.)  c_phi_c=1.
+     if(c_phi_c.lt.-1.) c_phi_c=-1.
+  endif
+
+  fct_reflectance=w/(4.*(mu+muo))*(fct_phase(g,alpha)&
+       &-1.+b*cos(pi*alpha/180.)+s0-s1*c_phi_c)
+
+  ! **************************************************************
+  ! Correction of the roughness effect if necessary
+
+  if (present(dzeta).and.(dzeta/=0.)) then
+     fct_reflectance=fct_reflectance*&
+          &fct_S(theta0, theta, muo, mu,muo_b, mu_b, phi, dzeta)
+  endif
+
+  err_flag=0
+  return
+  
+  end function fct_reflectance
+
+  ! **************************************************************
+  ! **************************************************************
+
+
+  function fct_h0(w, g, mu) 
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   w single scattering albedo                         |
+    ! |         g Henyey Greenstein phase function                 |
+    ! |         mu cosinus of the geometrical angles theta or      |
+    ! |           theta0                                           |
+    ! |                                                            |
+    ! |  - out  fct_h0 first order Chandrasekhar H function        |
+    ! |                                                            |
+    ! |  Other quantities :                                        |
+    ! |         x1,x2 parameters associated to the analytical form |
+    ! |         gamma factor gamma                                 |
+    ! |         b Legendre coefficient                             |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: w, g, mu, fct_h0, x1, x2
+    parameter(x1=1.0016,x2=0.0547)
+
+    ! Local variables :
+    real:: gamma, b 
+    gamma=sqrt(1-w)
+    b=0.
+
+    ! **************************************************************
+    if(abs(g).gt.1./3) then 
+       b=abs(g)/g 
+    else 
+       b=3.*g
+    endif
+
+    fct_h0=(1+2.*mu)/(x1+(1+x2*b)*2.*mu)
+    fct_h0=fct_h0-0.5*(1.-gamma)/(1.+gamma)-(1.-gamma)&
+         &/(1.+gamma)*mu
+    fct_h0=fct_h0*log((1+mu)/mu)+(1.-gamma)/(1.+gamma)
+    fct_h0=fct_h0*mu*((1+x2*b)/x1-gamma)
+    fct_h0=-fct_h0+1./x1
+    fct_h0=1./fct_h0
+
+    return
+
+  end function fct_h0
+
+  ! **************************************************************
+  ! **************************************************************
+
+  function fct_h1(w, g, mu)
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   w single scattering albedo                         |
+    ! |         g Henyey Greenstein phase function                 |
+    ! |         mu cosinus of the geometrical angles theta or      |
+    ! |           theta0                                           |
+    ! |                                                            |
+    ! |  - out  fct_h1 second order Chandrasekhar H function       |
+    ! |                                                            |
+    ! |  Other quantities :                                        |
+    ! |         x1,x2 parameters associated to the analytical form |
+    ! |         b Legendre coefficient                             |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: w, g, mu, fct_h1, x1, x2
+    parameter(x1=1.0035,x2=0.1318)
+
+    ! Local variables :
+    real:: b
+    b=0.
+
+    ! **************************************************************
+
+    if(abs(g).gt.1./3) then 
+       b=abs(g)/g 
+    else 
+       b=3.*g
+    endif
+
+    fct_h1=x1+x2*mu*w*b*(2-mu)
+
+    return
+
+  end function fct_h1
+
+  ! **************************************************************
+  ! **************************************************************
+
+  function fct_c( w, g)
+
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   w single scattering albedo                         |
+    ! |         g Henyey Greenstein phase function                 |
+    ! |                                                            |
+    ! |  - out  fct_c analytical form of constant c                |
+    ! |                                                            |
+    ! |  Other quantities :                                        |
+    ! |         x1,x2,x3,x4 parameters associated to the           |
+    ! |           analytical form                                  |
+    ! |         b Legendre coefficient                             |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: w, g, fct_c, x1, x2, x3, x4
+    parameter(x1=0.4832,x2=-0.3785,x3=0.0117,x4=-0.0289)
+
+    ! Local variables :
+    real:: b
+    b=0.
+
+    ! **************************************************************
+
+    if(abs(g).gt.1./3) then 
+       b=abs(g)/g 
+    else 
+       b=3.*g
+    endif
+
+    fct_c=b*(x1*w+x2*w**2+x3*b*w+x4)
+
+    return
+
+  end function fct_c
+
+  ! **************************************************************
+  ! **************************************************************
+
+  function fct_phase(g, alpha)
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   g Henyey Greenstein phase function                 |
+    ! |         alpha phase angle in degrees                       |
+    ! |                                                            |
+    ! |  - out  fct_phase value of the HG phase function           |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: g,alpha,pi,fct_phase
+    parameter(pi=3.1415927410126)
+
+    ! **************************************************************
+
+    fct_phase=(1-g**2)/(1+2.*g*cos(alpha*pi/180.)+g**2)**(3./2)
+!p.103 these Sylvain : attention, lui, il utilise un -2g*cos. Donc le g de Sylvain est ici -g.
+!Attention à la phase (à verifier) par rapport au trjet en ligne droite
+!Dans ce cas, g>0 --> diffuse vers l'avant
+!
+    return
+
+  end function fct_phase
+
+! **************************************************************
+
+subroutine correct(theta0, theta, phi, dzeta,& 
+     &muo, mu, muo_b, mu_b)
+
+  ! |------------------------------------------------------------|
+  ! |  Parameters :                                              |
+  ! |  - in   theta0 incidence angle (in degree)                 |
+  ! |         theta  emission angle (in degree)                  |
+  ! |         phi    azimuth angle (in radian)                   |
+  ! |         dzeta  mean roughness slope (in degree)            |
+  ! |                                                            |
+  ! |  - out  muo   cosinus of theta0                            |
+  ! |         mu    cosinus of theta                             |
+  ! |         muo_b facteur                                      |
+  ! |         mu_b  facteur                                      |
+  ! |                                                            |
+  ! |------------------------------------------------------------|
+
+  implicit none
+  real:: theta0, theta, phi, dzeta, muo, mu, muo_b, mu_b 
+
+  ! Local variables :
+
+  real:: theta0_c,theta_c,dzeta_c, xidz
+  real, parameter::pi=3.1415927410126
+
+  ! **************************************************************
+
+  ! Translation in radians
+
+  theta0_c=theta0
+  theta_c=theta
+  dzeta_c=dzeta
+  theta0=theta0/180.*pi
+  theta=theta/180.*pi
+  dzeta=dzeta/180.*pi
+
+  xidz=1./sqrt(1.+pi*tan(dzeta)**2)
+
+  !MODIF F.ANDRIEU
+  if(phi.gt.pi) phi=2.*pi-phi
+  !END MODIF
+
+
+  if(theta0.le.theta) then
+     ! Calculation of muo'
+     muo=(cos(theta0)+sin(theta0)*tan(dzeta)* &
+     & (cos(phi)*e2(dzeta,theta)+sin(phi/2.)**2*e2(dzeta,theta0)) &
+     & /(2.-e1(dzeta,theta)-(phi/pi)*e1(dzeta,theta0)))*xidz
+
+     ! Calculation of mu'
+     mu=(cos(theta)+sin(theta)*tan(dzeta)* &
+     & (e2(dzeta,theta)-sin(phi/2.)**2*e2(dzeta,theta0)) &
+     & /(2.-e1(dzeta,theta)-(phi/pi)*e1(dzeta,theta0)))*xidz
+
+  else
+
+     ! Calculation of muo'
+     muo=(cos(theta0)+sin(theta0)*tan(dzeta)* &
+     & (e2(dzeta,theta0)-sin(phi/2.)**2*e2(dzeta,theta)) &
+     & /(2.-e1(dzeta,theta0)-(phi/pi)*e1(dzeta,theta)))*xidz
+
+     ! Calculation of mu'
+     mu=(cos(theta)+sin(theta)*tan(dzeta)* &
+     & (cos(phi)*e2(dzeta,theta0)+sin(phi/2.)**2*e2(dzeta,theta)) &
+     & /(2.-e1(dzeta,theta0)-(phi/pi)*e1(dzeta,theta)))*xidz
+
+  endif
+
+  if(theta0.le.theta) then
+     ! Calculation of muo_b
+     muo_b=(cos(theta0)+sin(theta0)*tan(dzeta)* &
+     & e2(dzeta,theta)/(2.-e1(dzeta,theta)))*xidz
+
+     ! Calculation of mu_b
+     mu_b=(cos(theta)+sin(theta)*tan(dzeta)* &
+     & e2(dzeta,theta)/(2.-e1(dzeta,theta)))*xidz
+
+  else
+
+     ! Calculation of muo_b
+     muo_b=(cos(theta0)+sin(theta0)*tan(dzeta)* &
+     & e2(dzeta,theta0)/(2.-e1(dzeta,theta0)))*xidz
+
+     ! Calculation of mu_b
+     mu_b=(cos(theta)+sin(theta)*tan(dzeta)* &
+     & e2(dzeta,theta0)/(2.-e1(dzeta,theta0)))*xidz
+
+  endif
+
+  ! Translation in degree
+
+  theta0=theta0_c
+  theta=theta_c
+  dzeta=dzeta_c
+
+  return
+
+contains
+
+  ! **************************************************************
+
+  function e1(dzeta,x)
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   x angle (in radians)                               |
+    ! |         dzeta  mean roughness slope (in radians)           |
+    ! |                                                            |
+    ! |  - out  function e1                                        |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: x, dzeta, e1
+    
+    e1=exp(-2./pi*cot(dzeta)*cot(x))
+
+    return
+
+    end function e1
+        
+  ! **************************************************************
+
+  function e2(dzeta,x)
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   x angle (in radians)                               |
+    ! |         dzeta  mean roughness slope (in radians)           |
+    ! |                                                            |
+    ! |  - out  function e2                                        |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: x, dzeta, e2
+    
+    e2=exp(-1./pi*cot(dzeta)**2*cot(x)**2)
+
+    return
+
+    end function e2
+
+  ! **************************************************************
+
+  function cot(x)
+
+    ! |------------------------------------------------------------|
+    ! |  Parameters :                                              |
+    ! |  - in   x angle (in radians)                               |
+    ! |                                                            |
+    ! |  - out  cot co-tangent of x                                |
+    ! |                                                            |
+    ! |------------------------------------------------------------|
+
+    implicit none
+    real:: x,cot
+
+    ! **************************************************************
+
+    if(x.eq.0.) then 
+       cot=10.**16 
+    else 
+       cot=cos(x)/sin(x)
+    endif
+
+    return
+
+  end function cot
+
+  ! **************************************************************
+
+end subroutine correct
+
+! **************************************************************
+
+function fct_S(theta0, theta, muo, mu, muo_b, mu_b, phi, dzeta)
+
+  ! |------------------------------------------------------------|
+  ! |  Parameters :                                              |
+  ! |  - in   theta0 incidence angle (in degree)                 |
+  ! |         theta  emission angle (in degree)                  |
+  ! |         muo   modified cosinus of theta0                   |
+  ! |         mu    modified cosinus of theta                    |
+  ! |         muo_b facteur                                      |
+  ! |         mu_b  facteur                                      |
+  ! |         phi    azimuth angle (in radian)                   |
+  ! |         dzeta  mean roughness slope (in degree)            |
+  ! |                                                            |
+  ! |  - out  fct_S  roughness correction factor                 |
+  ! |                                                            |
+  ! |------------------------------------------------------------|
+
+  implicit none
+  real:: theta0, theta, muo, mu, muo_b, mu_b, phi, dzeta, fct_S 
+
+  ! Local variables :
+
+  real:: f,pi,theta0_c,theta_c,dzeta_c, xidz
+  parameter(pi=3.1415927410126)
+
+  ! **************************************************************
+
+  if(abs(phi).eq.pi) then
+     f=0. 
+  else
+     f=exp(-2.*tan(phi/2.))
+  endif
+
+!MODIF F.ANDRIEU 24/08/2013 : following line replaced after translation in radians
+!  xidz=1./sqrt(1.+pi*tan(dzeta)**2)
+
+  !     Translation in radians
+  theta0_c=theta0
+  theta_c=theta
+  dzeta_c=dzeta
+  theta0=theta0/180.*pi
+  theta=theta/180.*pi
+  dzeta=dzeta/180.*pi
+
+  xidz=1./sqrt(1.+pi*tan(dzeta)**2) !MODIF F.ANDRIEU 24/08/2013 : line replaced here
+
+  if(theta0.le.theta) then
+     fct_S=mu_b*muo_b*(1-f+f*xidz*cos(theta0)/muo_b)
+     fct_S=mu*cos(theta0)*xidz/fct_S
+  else
+     fct_S=mu_b*muo_b*(1-f+f*xidz*cos(theta)/mu_b)
+     fct_S=mu*cos(theta0)*xidz/fct_S
+  endif
+
+  !     Translation in degree
+  theta0=theta0_c
+  theta=theta_c
+  dzeta=dzeta_c
+
+  return
+end function fct_S
+
+! **************************************************************
+! **************************************************************
+
+
+
+
+
+
+
+
+
+

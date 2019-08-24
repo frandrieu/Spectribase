@@ -1,0 +1,13 @@
+IDL Version 8.0.1 (linux x86_64 m64). (c) 2010, ITT Visual Information Solutions
+Installation number: 502598.
+Licensed for use by: Laboratoire IDES
+
+% Compiled module: CONVOL_INST_SPECTRIBASE_BLOCK.
+Nb of image lines :   728
+Nb of image samples :    48
+Type of instrument function : 1
+% Case statement found no matches.
+% Execution halted at: CONVOL_INST_SPECTRIBASE_BLOCK  155
+   /home/fandrieu/Inversion/Programmes/Deresolution/convol_inst_spectribase_b
+  lock.pro
+%                      $MAIN$          

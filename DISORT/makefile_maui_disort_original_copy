@@ -1,0 +1,67 @@
+# Makefile for DISORT in distribution
+
+RM=rm
+
+FC= ifort
+#FFLAGS= -O3 -xW
+FFLAGS= -O3 -fPIC -m64
+
+CC=g++
+CFLAGS = 	-m64 -fPIC
+
+# Extra libraries
+EXTRALIB=/home/doute/Developp_num/Lib_Util/lib/reflspect_lib.so
+LIB_DIR =	/opt/intel/lib/intel64
+LIBS =		 -L$(LIB_DIR) -lifcore -lsvml 
+FLAGS_LIB =	-shared
+
+
+# Object files and executable
+OBJS0=DISORT_c.o 
+OBJS1=ErrPack.o RDI1MACH.o  LINPAK.o DISORT.o BDREF.o GETMOM.o
+OBJS2=DISOTEST2.o 
+OBJS3=DISOTEST3.o
+OBJS4=fct_w.o fct_deresol.o
+OBJS5=DISOTEST.o
+OBJS6=DISOTEST4.o
+
+EXES=disotest2 libdisort.so
+
+# Modules
+#MODU=
+
+# Make the disotest2  program
+
+all: disotest2 libdisort.so
+
+# Construction de la target "disort_lib.so" (Shared library)
+libdisort.so: $(OBJS0) $(OBJS1)
+	$(CC) $(OBJS0) $(OBJS1) $(FLAGS_LIB) $(LIBS) $(CFLAGS)  -o $@ 
+
+disotest: $(OBJS1) $(OBJS5)
+	$(FC)  $(FFLAGS) -o $@ $(OBJS1) $(OBJS5) 
+
+disotest2: $(OBJS1) $(OBJS2) $(OBJS4)
+	$(FC)  $(FFLAGS) -o $@ $(OBJS1) $(OBJS2)
+
+disotest3: $(OBJS1) $(OBJS3)
+	$(FC)  $(FFLAGS) -o $@ $(OBJS1) $(OBJS3)
+
+disotest4: $(OBJS1) $(OBJS6)
+	$(FC)  $(FFLAGS) -o $@ $(OBJS1) $(OBJS6)
+
+clean:
+	rm -f libdisort.so $(OBJS0) $(OBJS1) $(OBJS2) $(OBJS4) *.o
+
+clear:
+	rm -f $(OBJS0) $(OBJS1) $(OBJS2) $(OBJS4) *.o
+
+%.o:	%.F %.f90
+	$(FC) $(FFLAGS) $(INCS) -c $(LIBS) $< -o $(<:%.F=%.o)
+
+%.o:	%.f90
+	$(FC) $(FFLAGS) $(INCS) -c $(LIBS) $< -o $(<:%.f90=%.o)
+
+%.o:    %.c
+	$(CC) $(CFLAGS) -c $< -o $(<:%.c=%.o)
+

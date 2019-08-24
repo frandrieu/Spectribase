@@ -1,0 +1,43 @@
+FILES_UTIL= calc_texprop_2.3_clean.f tab_gauss_2.f conv_trigo.f90 def_op_lst.f90
+OBJS_UTIL=  calc_texprop_2.3_clean.o tab_gauss_2.o conv_trigo.o   def_op_lst.o 
+
+FILES_REFL_F= fct_reflectance.f90 fct_reflectance_SC_2.3_clean.f90 
+OBJS_REFL= fct_reflectance.o fct_reflectance_SC_2.3_clean.o
+
+RM=rm
+
+FC= /opt/intel/fce/10.0.026/bin/ifort
+#FFLAGS= -O3 -xW
+FFLAGS= -O3 -fPIC -m64
+
+CC=g++
+CFLAGS =        -m64 -fPIC
+
+# Extra libraries
+LIB_DIR1 =      /opt/intel/fce/10.0.026/lib
+LIB_DIR2 =      /home/fandrieu/Inversion/Programmes/DISORT
+#/user/workdir/doute/Developp_num/BRF_ordinate/DISORT/DISORT2.0b
+LIBS =           -L$(LIB_DIR2) -ldisort
+#  -L$(LIB_DIR1) -lifcore -lsvml
+FLAGS_LIB =
+
+spectribase: Spectribase_2.1_clean.o o_refl_f o_util
+	$(FC)  $(OBJS_UTIL) $(OBJS_REFL) Spectribase_2.1_clean.o \
+               $(FLAGS_LIB) $(LIBS) $(FFLAGS)  -o $@
+
+Spectribase_2.1_clean.o: Spectribase_2.1_clean.f90 o_util
+	$(FC) $(FFLAGS) Spectribase_2.1_clean.f90 -c
+	
+o_util: $(FILES_UTIL)
+	$(FC) $(FFLAGS) $(FILES_UTIL) -c
+
+o_refl_c : $(FILES_REFL_CC)
+	$(CC) $(FFLAGS) -c $(FILES_REFL_CC) $(CFLAGS) 
+
+o_refl_f: $(FILES_REFL_F)
+	$(FC) $(FFLAGS) -c $(FILES_REFL_F)
+
+all: clean spectribase
+	
+clean:
+	rm -f *.o *.mod

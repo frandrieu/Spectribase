@@ -1,0 +1,2 @@
+.run /home/fandrieu/Inversion/Programmes/Deresolution/convol_inst_spectribase_block.pro
+CONVOL_INST_SPECTRIBASE_BLOCK, 'param_slab_granul_dust', 0, /keep

@@ -1,0 +1,1 @@
+command =  './lance_spectri_'+suffix+'_em0_'+band+'.sh > /home/fandrieu/Inversion/job/lance_spectri_'+suffix+'_em0_'+band+'.log '

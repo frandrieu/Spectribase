@@ -1,0 +1,43 @@
+FILES_UTIL= calc_texprop.f tab_gauss.f conv_trigo.f90 def_op_lst.f90
+OBJS_UTIL=  calc_texprop.o tab_gauss.o conv_trigo.o   def_op_lst.o 
+
+FILES_REFL_F= fct_reflectance.f90 fct_reflectance_SC.f90 
+OBJS_REFL= fct_reflectance.o fct_reflectance_SC.o
+
+RM=rm
+
+FC= ifort
+#FFLAGS= -O3 -xW
+FFLAGS= -O3 -fPIC -m64
+
+CC=g++
+CFLAGS = 	-m64 -fPIC
+
+# Extra libraries
+LIB_DIR1 =	/opt/intel/lib/intel64
+LIB_DIR2 =	/home/spectro/Programmes/lib_maui
+#/user/workdir/doute/Developp_num/BRF_ordinate/DISORT/DISORT2.0b
+LIBS =		 -L$(LIB_DIR2) -ldisort
+#  -L$(LIB_DIR1) -lifcore -lsvml
+FLAGS_LIB =	
+
+spectribase: spectribase_vfclean.o o_refl_f o_util
+	$(FC)  $(OBJS_UTIL) $(OBJS_REFL) spectribase_vfclean.o \
+               $(FLAGS_LIB) $(LIBS) $(FFLAGS)  -o $@
+
+spectribase_vfclean.o: spectribase_vfclean.f90 o_util
+	$(FC) $(FFLAGS) spectribase_vfclean.f90 -c
+	
+o_util: $(FILES_UTIL)
+	$(FC) $(FFLAGS) $(FILES_UTIL) -c
+
+o_refl_c : $(FILES_REFL_CC)
+	$(CC) $(FFLAGS) -c $(FILES_REFL_CC) $(CFLAGS) 
+
+o_refl_f: $(FILES_REFL_F)
+	$(FC) $(FFLAGS) -c $(FILES_REFL_F)
+
+all: clean spectribase
+	
+clean:
+	rm -f *.o *.mod

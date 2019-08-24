@@ -1,0 +1,12 @@
+Avant de compiler : 
+
+ make clean -f 'makefile'
+
+exemple : make clean -f makefile_achille_spectribase
+
+Compilation : make -f 'makefile' 'file'
+
+exemple make -f makefile_achille_spectribase spectribase
+
+
+il faut penser à placer le fichier libdisort.so dans le repertoire job

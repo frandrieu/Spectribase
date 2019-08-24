@@ -1,0 +1,67 @@
+PDS_VERSION_ID                 = PDS3
+LABEL_REVISION_NOTE            = "2004-11-02, FM"
+RECORD_TYPE                    = FIXED_LENGTH
+RECORD_BYTES                   =         512
+FILE_RECORDS                   =          68
+LABEL_RECORDS                  =           6
+FILE_STATE                     = CLEAN
+
+^QUBE                          = ("specul_slab_0215_r0.1_ipag_em0_C.cub",1)
+PRODUCT_ID                     = "N/A"
+PRODUCER_INSTITUTION_NAME      = "Laboratoire de Planetologie de Grenoble"
+PRODUCT_CREATION_TIME          = 2015-02-11T19:00:03.01
+
+/* Software description */
+SOFTWARE_NAME                  = "N/A"
+SOFTWARE_DESC                  = "N/A"
+SOFTWARE_VERSION_ID            = "N/A"
+SOFTWARE_RELEASE_DATE          = "N/A"
+PRODUCER_ID                    = LPG
+
+/* Qube object description */
+
+/* Qube structure */
+OBJECT                         = QUBE
+  AXES                         =       3
+  AXIS_NAME                    = (BAND,SAMPLE,LINE)
+
+/* Core description */
+  CORE_ITEMS                   = (    3, 1326,    2)
+  CORE_ITEM_BYTES              =            4
+  CORE_ITEM_TYPE               = PC_REAL
+  CORE_BASE                    = 0.0
+  CORE_MULTIPLIER              = 1.0
+  CORE_VALID_MINIMUM           = 16#FF7FFFFA#
+  CORE_NULL                    = 16#FF7FFFFA#
+  CORE_LOW_REPR_SATURATION     = 16#FF7FFFFA#
+  CORE_LOW_INSTR_SATURATION    = 16#FF7FFFFA#
+  CORE_HIGH_REPR_SATURATION    = 16#FF7FFFFA#
+  CORE_HIGH_INSTR_SATURATION   = 16#FF7FFFFA#
+  CORE_NAME                    = NORMALIZED REFLECTANCE
+  CORE_UNIT                    = DIMENSIONLESS
+
+/* Suffix description */
+  SUFFIX_BYTES                 =       4
+  SUFFIX_ITEMS                 = (    0,    0,    0)
+  BAND_SUFFIX_NAME             = "N/A"
+  BAND_SUFFIX_UNIT             = "N/A"
+  BAND_SUFFIX_ITEM_TYPE        = PC_INTEGER
+  BAND_SUFFIX_ITEM_BYTES       =       4
+  BAND_SUFFIX_BASE             = 0.0
+  BAND_SUFFIX_MULTIPLIER       = 1.0
+  BAND_SUFFIX_VALID_MINIMUM    = 16#FF7FFFFA#
+  BAND_SUFFIX_NULL             = 16#FF7FFFFA#
+  BAND_SUFFIX_LOW_REPR_SAT     = 16#FF7FFFFA#
+  BAND_SUFFIX_LOW_INSTR_SAT    = 16#FF7FFFFA#
+  BAND_SUFFIX_HIGH_REPR_SAT    = 16#FF7FFFFA#
+  BAND_SUFFIX_HIGH_INSTR_SAT   = 16#FF7FFFFA#
+
+  GROUP                        = BAND_BIN
+    BAND_BIN_ORIGINAL_BAND     = (   0,   1,   2)
+    BAND_BIN_UNIT              = mi
+    BAND_BIN_CENTER            = ( 1.0000000, 1.0100000, 1.0200000)
+    BAND_BIN_WIDTH             = (    0.0100000,    0.0100000,    0.0100000)
+  END_GROUP                    = BAND_BIN
+END_OBJECT                     = QUBE
+END
+                                                                                                                                                                                                                                                                                                                                                                                                                                                      

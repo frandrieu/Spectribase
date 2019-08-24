@@ -1,0 +1,16 @@
+ENVI
+description = {
+ CUBE /home/fandrieu/Inversion/Programmes/Deresolution/specul_slab_0215_r0.1_ipag_em0_C.cub Calibrated }
+bands =            3
+samples =         1326
+lines =            2
+header offset = 0
+file type = ENVI Standard
+data type =            4
+interleave = bip
+sensor type = Unknown
+byte order = 0
+wavelength units = 
+z plot titles = {Wavelength, Radiance Factor}
+wavelength = {
+ 1.0000000, 1.0100000, 1.0200000}
